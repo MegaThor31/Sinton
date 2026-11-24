@@ -16,11 +16,13 @@ Personalización local de Spotify de escritorio para Windows: tema Bloom con ace
 ```powershell
 git clone https://github.com/MegaThor31/Sinton.git
 cd Sinton
+node scripts/vendor-lenis.js
 node bin/sinton.js doctor
 node bin/sinton.js backup
 node bin/sinton.js apply
 ```
 
+Si backup dice que ya existe una copia, sigue con apply. No uses --force con Spotify ya parcheado
 `doctor` comprueba la instalación, `backup` guarda una copia limpia de Spotify y `apply` aplica Sinton. Abre Spotify después.
 
 ## Actualizar
