@@ -1,0 +1,7 @@
+{
+  "name": "Iconos de playlists",
+  "type": "extension",
+  "description": "Muestra en cada canción las portadas de tus playlists que la contienen. Clic en una portada para abrir esa playlist.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"],
+  "styles": ["styles.css"]
+}

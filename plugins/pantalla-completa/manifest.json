@@ -1,0 +1,7 @@
+{
+  "name": "Pantalla completa",
+  "type": "extension",
+  "description": "Vista a pantalla completa con fondo a elegir (foto del artista, portada o portada difuminada), controles, progreso y letra sincronizada.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"],
+  "styles": ["styles.css"]
+}

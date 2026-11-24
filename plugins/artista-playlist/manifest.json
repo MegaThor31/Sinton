@@ -1,0 +1,7 @@
+{
+  "name": "Playlist de artista",
+  "type": "extension",
+  "description": "Crea una playlist con todas las canciones de un artista: todas absolutas, sin repetir, sin colaboraciones o sin versiones alternativas.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"],
+  "styles": ["styles.css"]
+}

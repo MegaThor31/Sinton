@@ -1,0 +1,7 @@
+{
+  "name": "Ocultar audiolibros",
+  "type": "extension",
+  "description": "Oculta el filtro Audiolibros y las secciones de audiolibros. No toca los podcasts.",
+  "version": "1.0.0",
+  "main": "index.js"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Letras+",
+  "type": "extension",
+  "description": "Panel de letras sincronizadas con fondo de la portada. Busca en Spotify y en LRCLIB, así que más canciones tienen letra y letra sincronizada.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"],
+  "styles": ["styles.css"]
+}

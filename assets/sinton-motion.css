@@ -1,0 +1,165 @@
+/* Sinton Motion v8.1. Transition rules are forced because Spotify declares its own per-class transitions. */
+:root { --motion-base: 150ms; --motion-ease: cubic-bezier(.2,.8,.2,1); }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: clip; }
+@media (prefers-reduced-motion: no-preference) {
+  :root:not(#s) :is(button, [role="button"], a, [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"]) {
+    transition-property: color, background-color, border-color, opacity, box-shadow, transform, scale !important;
+    transition-duration: var(--motion-base) !important;
+    transition-timing-function: var(--motion-ease) !important;
+  }
+  /* Las filas (listas largas) solo cambian de color: sin transform ni sombras para no repintar de más. */
+  :root:not(#s) [role="row"] {
+    transition-property: color, background-color !important;
+    transition-duration: var(--motion-base) !important;
+    transition-timing-function: var(--motion-ease) !important;
+  }
+  :root:not(#s) :is(button, [role="button"], [role="menuitem"], [role="switch"], [role="checkbox"]) :is(svg, path) {
+    transition-property: color, fill, stroke, opacity, transform !important;
+    transition-duration: var(--motion-base) !important;
+    transition-timing-function: var(--motion-ease) !important;
+  }
+}
+:root:not(#s) [data-encore-id="chip"] {
+  transition-property: none !important;
+  transition-duration: 0s !important;
+}
+
+/* Sinton Accent layer: orange details on top of the generated theme. */
+::selection { background: rgba(var(--sn-accent-rgb,30,215,96),.35); color: var(--sn-text,#ffffff); }
+:root:not(#s) :is(.encore-dark-theme, .encore-base-set, .encore-bright-accent-set, .Root, body) {
+  --essential-bright-accent: var(--sn-accent,#1ed760);
+  --text-bright-accent: var(--sn-accent-text,#1ed760);
+  --essential-positive: var(--sn-accent,#1ed760);
+  --text-positive: var(--sn-accent-text,#1ed760);
+}
+:root:not(#s) .progress-bar {
+  --fg-color: var(--sn-accent,#1ed760);
+}
+:root:not(#s) .encore-bright-accent-set {
+  --background-base: var(--sn-accent,#1ed760);
+  --background-highlight: var(--sn-hover,#3be477);
+  --background-press: var(--sn-press,#1abc54);
+}
+:root:not(#s) .encore-inverted-light-set {
+  --background-base: var(--sn-accent,#1ed760);
+  --background-highlight: var(--sn-hover,#3be477);
+  --background-press: var(--sn-press,#1abc54);
+  --text-base: var(--sn-on-accent,#171717);
+  --text-subdued: color-mix(in srgb,var(--sn-accent,#1ed760) 25%,#000);
+}
+:root:not(#s) :is([data-encore-id="chip"][aria-pressed="true"], [data-encore-id="chip"][aria-checked="true"], [data-encore-id="chip"][aria-selected="true"], [data-encore-id="chip"][aria-current="true"], [data-encore-id="chip"]:active) {
+  background-color: var(--sn-accent,#1ed760) !important;
+  color: var(--sn-on-accent,#171717) !important;
+}
+:root:not(#s) :is([data-testid="control-button-playpause"], [data-testid="action-bar"] [data-testid="play-button"], [data-testid="action-bar-row"] [data-testid="play-button"]) {
+  background-color: var(--sn-accent,#1ed760) !important;
+  color: var(--sn-on-accent,#171717) !important;
+  box-shadow: 0 6px 18px rgba(var(--sn-accent-rgb,30,215,96),.35);
+}
+:root:not(#s) :is([data-testid="control-button-playpause"], [data-testid="action-bar"] [data-testid="play-button"], [data-testid="action-bar-row"] [data-testid="play-button"]):hover {
+  background-color: var(--sn-hover,#3be477) !important;
+}
+:root:not(#s) :is([data-testid="control-button-playpause"], [data-testid="action-bar"] [data-testid="play-button"], [data-testid="action-bar-row"] [data-testid="play-button"]):active {
+  background-color: var(--sn-press,#1abc54) !important;
+}
+:root:not(#s) :is([data-testid="control-button-playpause"], [data-testid="action-bar"] [data-testid="play-button"], [data-testid="action-bar-row"] [data-testid="play-button"]) svg {
+  color: var(--sn-on-accent,#171717) !important;
+  fill: currentColor;
+}
+:root:not(#s) #main-view {
+  background-image:
+    radial-gradient(90% 220px at 50% -40px, rgba(var(--sn-accent-rgb,30, 215, 96),.14), transparent 70%),
+    linear-gradient(180deg, var(--sn-bg2,#242424) 0, var(--sn-bg,#202020) 240px);
+}
+:root:not(#s) .os-scrollbar-handle { background: rgba(var(--sn-accent-rgb,30,215,96),.35); border-radius: 6px; }
+:root:not(#s) .os-scrollbar:hover .os-scrollbar-handle,
+:root:not(#s) .os-scrollbar-handle:hover { background: rgba(var(--sn-accent-rgb,30,215,96),.65); }
+:root:not(#s) [data-testid="now-playing-bar"] {
+  box-shadow: 0 3px 12px rgba(0,0,0,.22), 0 8px 28px rgba(var(--sn-accent-rgb,30, 215, 96),.09);
+}
+:root:not(#s) [data-testid="control-button-playpause"] { box-shadow: 0 0 12px rgba(var(--sn-accent-rgb,30,215,96),.28); }
+:root:not(#s) [data-testid="control-button-playpause"]:hover { box-shadow: 0 0 20px rgba(var(--sn-accent-rgb,30,215,96),.5); }
+:root:not(#s) :is(#global-nav-bar form[role="search"]):focus-within {
+  box-shadow: inset 0 0 0 2px var(--sn-accent,#1ed760), 0 0 16px rgba(var(--sn-accent-rgb,30, 215, 96),.2);
+}
+:root:not(#s) :is(#context-menu, [data-testid="context-menu"]) [role="menuitem"]:not([aria-disabled="true"]):is(:hover, :focus) {
+  box-shadow: inset 2px 0 0 var(--sn-accent,#1ed760);
+}
+:root:not(#s) #Desktop_LeftSidebar_Id a[aria-current="page"] { color: var(--sn-accent-text,#1ed760); }
+:root:not(#s) :is(button, a, [role="button"]):focus-visible {
+  outline: 2px solid var(--sn-hover,#3be477);
+  outline-offset: 2px;
+}
+
+/* Marcos de la aplicación (barra superior y huecos): negro de Spotify -> tono del fondo elegido. */
+:root:not(#s) :is(.encore-app-frame-set, .encore-inverted-dark-set) {
+  --background-base: var(--sn-bg3,#171717);
+  --background-highlight: var(--sn-bg2,#242424);
+  --background-press: var(--sn-bg,#202020);
+  --background-elevated-base: var(--sn-bg2,#242424);
+  --background-elevated-highlight: var(--sn-bg-hi,#2b2b2b);
+  --background-elevated-press: var(--sn-bg,#202020);
+  --background-tinted-base: rgba(var(--sn-text-rgb,242,242,242),.08);
+  --text-base: var(--sn-text,#f2f2f2);
+  --text-subdued: var(--sn-muted,#b4b4b4);
+  --essential-base: var(--sn-text,#f2f2f2);
+  --essential-subdued: var(--sn-muted,#b4b4b4);
+}
+:root:not(#s) :is(.Root, [data-testid="root"], body) { background-color: var(--sn-bg3,#171717); }
+:root:not(#s) .encore-muted-accent-set {
+  --background-base: var(--sn-bg3,#171717);
+  --background-highlight: var(--sn-bg2,#242424);
+  --background-elevated-base: var(--sn-bg2,#242424);
+  --background-elevated-highlight: var(--sn-bg-hi,#2b2b2b);
+  --background-tinted-base: rgba(var(--sn-text-rgb,242,242,242),.1);
+}
+:root { --carousel-start-chevron-gradient: var(--sn-bg,#202020); --carousel-end-chevron-gradient: var(--sn-bg,#202020); }
+
+/* Colores dinámicos de Spotify: la cabecera de inicio, playlists y artistas recibe en línea un juego de
+   variables (--background-base, --text-base...) calculado de la portada. Las variables de texto se fuerzan
+   siempre a las del tema para que se lean sobre el fondo elegido (en modo claro salían blancas). */
+:root:not(#s) #main-view :is([style*="--background-base"], [style*="--text-base"]) {
+  --text-base: var(--sn-main-text,#f2f2f2) !important;
+  --text-subdued: var(--sn-muted,#b4b4b4) !important;
+  --essential-base: var(--sn-muted,#b4b4b4) !important;
+  --essential-subdued: var(--sn-border,#353535) !important;
+  --higher-contrast-text-base-color: var(--sn-main-text,#f2f2f2) !important;
+}
+html[data-sinton-scheme="light"]:root:not(#s) #main-view :is([style*="--background-base"], [style*="--text-base"]) {
+  --text-bright-accent: var(--sn-accent-text,#1ed760) !important;
+}
+
+/* Quitar degradados (misma idea que el snippet "Remove Top gradient" del Marketplace de Spicetify, pero sin
+   depender de nombres de clase): se anulan en CSS, con !important, las variables de color que Spotify pone en
+   línea. Como es CSS, React puede volver a escribirlas sin que el degradado reaparezca. */
+html[data-sinton-flat] :is(#main-view, #main-view [style*="--background"], #main-view [style*="--color-"]) {
+  --background-base: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --background-base-min-contrast: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --background-base-high-contrast: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --background-base-20: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --background-base-70: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --background-color: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --background-highlight: var(--sn-bg2,#242424) !important;
+  --background-press: var(--sn-bg3,#171717) !important;
+  --background-elevated-base: var(--sn-bg2,#242424) !important;
+  --background-elevated-highlight: var(--sn-bg-hi,#2b2b2b) !important;
+  --background-elevated-press: var(--sn-bg3,#171717) !important;
+  --background-tinted-base: rgba(var(--sn-text-rgb,242,242,242),.06) !important;
+  --background-tinted-highlight: rgba(var(--sn-accent-rgb,30,215,96),.08) !important;
+  --background-tinted-press: rgba(var(--sn-accent-rgb,30,215,96),.12) !important;
+  --cinema-mode-bg-color-from: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --cinema-mode-bg-color-to: var(--sn-flat,var(--sn-bg,#202020)) !important;
+  --text-bright-accent: var(--sn-accent-text,#1ed760) !important;
+}
+/* Capas decorativas vacías con el color de la portada en línea (cabecera clásica). */
+html[data-sinton-flat] #main-view [style*="background-color"]:empty { background-color: var(--sn-flat,var(--sn-bg,#202020)) !important; }
+/* Velos negros semitransparentes (linear-gradient(#0009, ...)) que Spotify pone en capas vacías encima del
+   color: barra de acciones de playlist, cabecera del inicio, pie de cabeceras. Eran el tono grisáceo que
+   quedaba. Se respetan las capas con imagen (url) y el velo justo encima de una imagen de artista, para que
+   el texto blanco siga leyéndose sobre la foto. */
+html[data-sinton-flat] #main-view div:empty:not([style*="url("]):not([style*="url("] + div) { background-image: none !important; }
+/* Imagen de cabecera de artista: se mantiene, pero sin el velo de color encima. */
+html[data-sinton-flat] #main-view [data-seamless-gradient] { background-image: none !important; }
+html[data-sinton-flat]:root:not(#s) #main-view { background-color: var(--sn-flat,var(--sn-bg,#202020)); background-image: none; }
+html[data-sinton-flat]:root:not(#s) [data-testid="now-playing-bar"] { box-shadow: 0 3px 12px var(--sn-shadow,rgba(0,0,0,.22)); }

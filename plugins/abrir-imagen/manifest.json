@@ -1,0 +1,6 @@
+{
+  "name": "Abrir imagen",
+  "type": "extension",
+  "description": "Abre en el navegador, a la máxima resolución disponible, portadas de canciones, álbumes y playlists y fotos de artistas. También con Alt+clic sobre cualquier imagen.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"]
+}

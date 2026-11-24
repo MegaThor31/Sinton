@@ -1,0 +1,7 @@
+{
+  "name": "Subir en la cola",
+  "type": "extension",
+  "description": "Sube cualquier canción al principio de la cola: botón en cada fila del panel de la cola y opción en el clic derecho de canciones.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"],
+  "styles": ["styles.css"]
+}

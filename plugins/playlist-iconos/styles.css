@@ -1,0 +1,18 @@
+/* playlist-iconos */
+.sn-pi { display: inline-flex; align-items: center; gap: 3px; }
+.sn-pi-icon {
+  width: 20px; height: 20px; padding: 0; border: 0; border-radius: 4px; overflow: hidden;
+  display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto;
+  background: var(--sn-border,#353535); color: var(--sn-accent,#1ed760); font: 700 11px/1 inherit; cursor: pointer;
+  transition: transform 140ms ease-out, box-shadow 140ms ease-out;
+}
+.sn-pi-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.sn-pi-icon:hover { transform: scale(1.25); box-shadow: 0 0 0 1px var(--sn-accent,#1ed760); }
+.sn-pi-icon:focus-visible, .sn-pi-more:focus-visible { outline: 2px solid var(--sn-hover,#3be477); outline-offset: 1px; }
+.sn-pi-more {
+  height: 20px; padding: 0 5px; border: 0; border-radius: 4px; background: var(--sn-bg2,#242424);
+  color: var(--sn-muted,#b4b4b4); font: 600 11px/20px inherit; cursor: pointer;
+}
+.sn-pi-more:hover { color: var(--sn-hover,#3be477); }
+.sn-modal .sn-pi-icon { width: 32px; height: 32px; }
+@media (prefers-reduced-motion: reduce) { .sn-pi-icon { transition: none; } }

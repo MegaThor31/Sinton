@@ -1,0 +1,17 @@
+{
+  "name": "sinton",
+  "version": "0.1.0",
+  "description": "Personalización local de Spotify de escritorio (Windows)",
+  "type": "module",
+  "bin": {
+    "sinton": "bin/sinton.js"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "LGPL-2.1-only",
+  "private": true
+}

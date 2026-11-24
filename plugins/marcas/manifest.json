@@ -1,0 +1,7 @@
+{
+  "name": "Marcas",
+  "type": "extension",
+  "description": "Marca canciones con etiquetas de color (como los guardados de Instagram o TikTok) y filtra cualquier playlist por ellas sin moverlas ni borrarlas.",
+  "scripts": ["src/logic.js", "src/ui.js", "index.js"],
+  "styles": ["styles.css"]
+}
