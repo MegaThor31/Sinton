@@ -101,41 +101,77 @@
     return order.map(function (key) { return byKey.get(key); });
   }
 
-  function dedupeByUri(tracks) {
-    const seen = new Set();
-    return tracks.filter(function (track) {
-      if (seen.has(track.uri)) return false;
-      seen.add(track.uri);
-      return true;
-    });
+  // Fecha del lanzamiento como número AAAAMMDD; null si no hay fecha válida.
+  function dateKey(track) {
+    const raw = track && track.release && track.release.date;
+    const match = /^(\d{4})(?:-(\d{2}))?(?:-(\d{2}))?/.exec(String(raw || ""));
+    if (!match) return null;
+    const year = Number(match[1]);
+    if (!year) return null;
+    const month = Number(match[2] || 1) || 1;
+    const day = Number(match[3] || 1) || 1;
+    return year * 10000 + month * 100 + day;
   }
 
-  function releaseDate(track) {
-    return (track.release && track.release.date) || "";
+  // direction: 1 = antiguo→reciente, -1 = reciente→antiguo. Sin fecha, siempre al final.
+  function compareEntries(a, b, direction) {
+    if (a.date !== b.date) {
+      if (a.date === null) return 1;
+      if (b.date === null) return -1;
+      return (a.date - b.date) * direction;
+    }
+    if (a.rank !== b.rank) return a.rank - b.rank;
+    return a.index - b.index;
   }
 
   // tracks: canciones de todos los lanzamientos cargados. Devuelve la lista final en orden.
   function buildList(tracks, options, artistUri) {
     const opts = Object.assign({}, DEFAULTS, options);
-    let list = tracks.filter(function (track) {
-      if (!track.playable || !hasArtist(track, artistUri)) return false;
-      if (!opts[category(track.release)]) return false;
-      if (opts.noCollabs && isCollab(track, artistUri)) return false;
-      if (opts.noAlternates && isAlternate(track.name)) return false;
+    const direction = opts.order === "oldest" ? 1 : -1;
+
+    const entries = tracks
+      .filter(function (track) {
+        if (!track.playable || !hasArtist(track, artistUri)) return false;
+        if (!opts[category(track.release)]) return false;
+        if (opts.noCollabs && isCollab(track, artistUri)) return false;
+        if (opts.noAlternates && isAlternate(track.name)) return false;
+        return true;
+      })
+      .map(function (track, index) {
+        return { track: track, index: index, date: dateKey(track), rank: CATEGORY_ORDER[category(track.release)] };
+      });
+
+    // Orden cronológico ascendente: el primero de cada canción es su lanzamiento original.
+    const chronological = entries.slice().sort(function (a, b) { return compareEntries(a, b, 1); });
+
+    const seenUris = new Set();
+    const distinct = chronological.filter(function (entry) {
+      if (seenUris.has(entry.track.uri)) return false;
+      seenUris.add(entry.track.uri);
       return true;
     });
-    const direction = opts.order === "oldest" ? 1 : -1;
-    list = list
-      .map(function (track, index) { return { track: track, index: index }; })
-      .sort(function (a, b) {
-        const da = releaseDate(a.track);
-        const db = releaseDate(b.track);
-        if (da !== db) return da < db ? -direction : direction;
-        return a.index - b.index;
-      })
-      .map(function (entry) { return entry.track; });
-    list = dedupeByUri(list);
-    return opts.unique ? dedupeByTitle(list) : list;
+
+    let groups;
+    if (opts.unique) {
+      const byKey = new Map();
+      groups = [];
+      for (const entry of distinct) {
+        const key = titleKey(entry.track.name);
+        const group = byKey.get(key);
+        if (!group) {
+          const created = { origin: entry, track: entry.track };
+          byKey.set(key, created);
+          groups.push(created);
+        } else if (better(entry.track, group.track)) {
+          group.track = entry.track;
+        }
+      }
+    } else {
+      groups = distinct.map(function (entry) { return { origin: entry, track: entry.track }; });
+    }
+
+    groups.sort(function (a, b) { return compareEntries(a.origin, b.origin, direction); });
+    return groups.map(function (group) { return group.track; });
   }
 
   part.logic = {
