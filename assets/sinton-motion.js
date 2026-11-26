@@ -3,8 +3,8 @@
   if (window.__sintonMotion) return;
   window.__sintonMotion = true;
 
-  const VERSION = 8;
-  const CONFIG = { lenis: true, lerp: 0.12, debug: true };
+  const VERSION = 9;
+  const CONFIG = { lenis: true, lerp: 0.2, debug: true, panelAnimation: true };
   const EASE = 'cubic-bezier(.2,.8,.2,1)';
   const SPRING = 'cubic-bezier(.34,1.56,.64,1)';
   const VIEWPORT = '#main-view [data-overlayscrollbars-viewport], #main-view .os-viewport';
@@ -18,13 +18,21 @@
   const GRID_MIN_DELTA = 8;
   const PAGE_WAIT_MS = 140;
   const PAGE_ADDS_MIN = 6;
+  const PANEL_MS = 280;
+  // Zonas donde Lenis no toca la rueda. Sin [role="listbox"]: los carruseles de Spotify usan ese rol.
+  const PREVENT = '[data-lenis-prevent], [role="menu"], [role="dialog"], input, textarea';
   const root = document.documentElement;
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const seen = new WeakSet();
   const lastPlayPause = new WeakMap();
+  const panelRects = new WeakMap();
+  const panelAnimations = new WeakMap();
   const stats = { overlaysOpened: 0, overlaysClosed: 0, pages: 0, presses: 0, playPause: 0, navigations: 0, sidebarOpened: 0, sidebarClosed: 0, gridAnimations: 0 };
   let lenis = null;
   let current = null;
+  let currentContent = null;
+  let wheelTimer = null;
+  let lastRebuild = 0;
   let lastScroll = 0;
   let lastPage = 0;
   let lastClick = 0;
@@ -39,10 +47,9 @@
   let rightRect = null;
   let watchedRight = null;
   let grid = null;
-  let gridCols = null;
-  let gridBusy = false;
+  let panelsReady = false;
   let gridInner = window.innerWidth;
-  let gridReason = 'sin cambios de columnas todavia';
+  let gridReason = 'sin cambios de paneles todavia';
   let watchedMain = null;
   let panel = null;
   let pressing = false;
@@ -74,45 +81,84 @@
     return main ? main.getBoundingClientRect().width : 0;
   }
 
-  function parseTracks(value) {
-    const parts = value.replace(/\[[^\]]*\]/g, ' ').trim().split(/\s+/).filter(Boolean);
-    if (!parts.length || !parts.every((part) => /^-?\d+(\.\d+)?px$/.test(part))) return null;
-    return parts.map(parseFloat);
+  function rectOf(element) {
+    const rect = element.getBoundingClientRect();
+    return { left: rect.left, right: rect.right, width: rect.width };
   }
 
+  function clamp(value, max) {
+    return Math.min(Math.max(value, 0), max);
+  }
+
+  // Paneles animables: la vista central y los dos laterales.
+  function panelTargets() {
+    const targets = [];
+    const main = document.getElementById('main-view');
+    const left = document.getElementById('Desktop_LeftSidebar_Id');
+    const right = document.querySelector(RIGHT);
+    if (left) targets.push({ name: 'left', element: left });
+    if (main) targets.push({ name: 'main', element: main });
+    if (right) targets.push({ name: 'right', element: right });
+    return targets;
+  }
+
+  // Descubre con un recorte el panel que ha crecido, desde el borde que se ha movido. El recorte no
+  // recalcula el diseño: Spotify recoloca la página una sola vez y lo que se anima es solo la máscara.
+  function revealPanel(element, insetLeft, insetRight, fade) {
+    const running = panelAnimations.get(element);
+    if (running) {
+      try { running.cancel(); } catch (error) { console.error('[Sinton Motion] panel', error); }
+    }
+    const from = { clipPath: `inset(0px ${Math.round(insetRight)}px 0px ${Math.round(insetLeft)}px)` };
+    const to = { clipPath: 'inset(0px 0px 0px 0px)' };
+    if (fade) { from.opacity = 0.35; to.opacity = 1; }
+    const animation = play(element, [from, to], { duration: PANEL_MS });
+    if (!animation) return false;
+    panelAnimations.set(element, animation);
+    const done = () => { if (panelAnimations.get(element) === animation) panelAnimations.delete(element); };
+    animation.finished.then(done, done);
+    return true;
+  }
+
+  // Se llama cuando cambia el ancho de la vista central, es decir, al abrir, cerrar o redimensionar un panel.
   function onGridResize() {
-    if (!grid || !grid.isConnected || gridBusy) return;
-    const next = window.getComputedStyle(grid).gridTemplateColumns;
-    const previous = gridCols;
-    gridCols = next;
     const resized = window.innerWidth !== gridInner;
     gridInner = window.innerWidth;
-    if (!previous || previous === next) return;
+    const changes = [];
+    for (const target of panelTargets()) {
+      const next = rectOf(target.element);
+      let previous = panelRects.get(target.element);
+      panelRects.set(target.element, next);
+      if (!previous) {
+        // Solo el panel derecho puede aparecer de la nada; el resto se registra sin animar.
+        if (target.name !== 'right' || !panelsReady) continue;
+        previous = { left: next.right, right: next.right, width: 0 };
+      } else if (previous.width < 2) {
+        previous = target.name === 'left'
+          ? { left: next.left, right: next.left, width: 0 }
+          : { left: next.right, right: next.right, width: 0 };
+      }
+      if (next.width - previous.width <= GRID_MIN_DELTA) continue;
+      const insetLeft = clamp(previous.left - next.left, next.width);
+      const insetRight = clamp(next.right - previous.right, next.width);
+      if (insetLeft < 1 && insetRight < 1) continue;
+      changes.push({ target, insetLeft, insetRight, grown: Math.round(next.width - previous.width) });
+    }
+    if (!panelsReady) { panelsReady = true; return; }
+    if (!changes.length) return;
+    if (!CONFIG.panelAnimation) { gridReason = 'desactivado en CONFIG'; return; }
     if (resized) { gridReason = 'omitido: la ventana cambio de tamano'; return; }
     if (reduce.matches) { gridReason = 'omitido: movimiento reducido'; return; }
     if (isDragging()) { gridReason = 'omitido: arrastre del borde'; return; }
-    const from = parseTracks(previous);
-    const to = parseTracks(next);
-    if (!from || !to) { gridReason = `omitido: columnas no numericas (${previous} -> ${next})`; return; }
-    if (from.length !== to.length) { gridReason = `omitido: cambia el numero de columnas (${from.length} -> ${to.length})`; return; }
-    if (!from.some((value, index) => Math.abs(value - to[index]) > GRID_MIN_DELTA)) { gridReason = 'omitido: cambio menor de 8 px'; return; }
-    gridBusy = true;
-    stats.gridAnimations += 1;
-    gridReason = `animado: ${previous} -> ${next}`;
-    let animation;
-    try {
-      animation = grid.animate([{ gridTemplateColumns: previous }, { gridTemplateColumns: next }], { duration: 300, easing: EASE });
-    } catch (error) {
-      gridBusy = false;
-      gridReason = `error: ${error.message}`;
-      console.error('[Sinton Motion] rejilla', error);
-      return;
+    const animated = [];
+    for (const change of changes) {
+      if (revealPanel(change.target.element, change.insetLeft, change.insetRight, change.target.name !== 'main')) {
+        animated.push(`${change.target.name} +${change.grown}px`);
+      }
     }
-    const done = () => {
-      gridBusy = false;
-      if (grid && grid.isConnected) gridCols = window.getComputedStyle(grid).gridTemplateColumns;
-    };
-    animation.finished.then(done, done);
+    if (!animated.length) { gridReason = 'error: no se pudo crear la animacion'; return; }
+    stats.gridAnimations += 1;
+    gridReason = `animado: ${animated.join(', ')}`;
   }
 
   const gridObserver = typeof ResizeObserver === 'function' ? new ResizeObserver(onGridResize) : null;
@@ -134,10 +180,7 @@
     }
     if (grid && grid.isConnected && grid.contains(main)) return;
     const found = findGrid(main);
-    if (found && found !== grid) {
-      grid = found;
-      gridCols = window.getComputedStyle(grid).gridTemplateColumns;
-    }
+    if (found && found !== grid) grid = found;
   }
 
   function toast(text, duration) {
@@ -152,11 +195,11 @@
   function checkSidebarAnimation() {
     if (!CONFIG.debug || reduce.matches) return;
     const delta = Math.abs(mainWidth() - pressMainWidth);
-    if (delta < GRID_MIN_DELTA || stats.gridAnimations !== pressGridCount || gridBusy) return;
+    if (delta < GRID_MIN_DELTA || stats.gridAnimations !== pressGridCount) return;
     const now = performance.now();
     if (now - lastHint < 4000) return;
     lastHint = now;
-    toast(`Sinton laterales (${Math.round(delta)} px): ${grid ? gridReason : 'no encuentro la rejilla de la interfaz'}`, 7000);
+    toast(`Sinton laterales (${Math.round(delta)} px): ${gridReason}`, 7000);
   }
 
   function play(element, frames, options) {
@@ -170,7 +213,9 @@
   }
 
   function isGhost(node) {
-    return node.nodeType === 1 && node.getAttribute('data-sinton-ghost') === '1';
+    if (node.nodeType !== 1) return false;
+    if (node.getAttribute('data-sinton-ghost') === '1') return true;
+    return Boolean(node.parentElement && node.parentElement.closest('[data-sinton-ghost="1"]'));
   }
 
   function playButtonOf(node) {
@@ -246,6 +291,7 @@
 
   function animateSidebarClose(node) {
     if (reduce.matches || !rightRect) return;
+    if (node.getElementsByTagName('*').length > 600) return;
     let ghost;
     try {
       ghost = makeGhost(node);
@@ -571,6 +617,9 @@
       version: VERSION,
       reducedMotion: reduce.matches,
       lenisActive: Boolean(lenis),
+      lenisLimit: lenis && typeof lenis.limit === 'number' ? lenis.limit : null,
+      scrollablePx: viewport ? viewport.scrollHeight - viewport.clientHeight : null,
+      lenisContentConnected: currentContent ? currentContent.isConnected : null,
       lenisLoaded: typeof ((window.Lenis && window.Lenis.default) || window.Lenis) === 'function',
       animateSupported: typeof Element.prototype.animate === 'function',
       href: window.location.href,
@@ -580,6 +629,7 @@
       gridColumns: grid ? window.getComputedStyle(grid).gridTemplateColumns : null,
       gridReason,
       rightSidebarFound: Boolean(document.querySelector(RIGHT)),
+      rightButtons: watchedRight ? Array.from(watchedRight.querySelectorAll('button, [role="button"]')).slice(0, 8).map(brief) : null,
       playButtonsDetected: document.querySelectorAll(PLAY_SELECTOR).length,
       underCursor: lastTarget instanceof Element ? describe(lastTarget) : null,
       scrollViewport: viewport ? describe(viewport) : null,
@@ -595,12 +645,23 @@
   }, true);
 
   function destroyLenis() {
+    window.clearTimeout(wheelTimer);
     if (lenis) {
       try { lenis.destroy(); } catch (error) { console.error('[Sinton Motion] destroy', error); }
     }
     lenis = null;
     current = null;
+    currentContent = null;
     root.removeAttribute('data-sinton-lenis');
+  }
+
+  // Lenis mide el contenido que recibió al crearse. Si Spotify lo sustituye, hay que volver a crearlo.
+  function lenisHealthy(viewport, content) {
+    if (!lenis || viewport !== current || content !== currentContent) return false;
+    if (!viewport.isConnected || !content.isConnected) return false;
+    if (lenis.isStopped) return false;
+    const scrollable = viewport.scrollHeight - viewport.clientHeight;
+    return !(scrollable > 1 && typeof lenis.limit === 'number' && lenis.limit < 1);
   }
 
   function attachLenis() {
@@ -610,17 +671,18 @@
     if (typeof Ctor !== 'function') return;
     const viewport = document.querySelector(VIEWPORT);
     if (!viewport) { destroyLenis(); return; }
-    if (viewport === current && viewport.isConnected) return;
-    destroyLenis();
     const content = viewport.firstElementChild;
-    if (!content) return;
+    if (!content) { destroyLenis(); return; }
+    if (lenisHealthy(viewport, content)) return;
+    destroyLenis();
     try {
       lenis = new Ctor({
         wrapper: viewport, content, eventsTarget: viewport,
         lerp: CONFIG.lerp, smoothWheel: true, syncTouch: false, autoRaf: true, respectReducedMotion: true,
-        prevent: (node) => node instanceof Element && Boolean(node.closest('[data-lenis-prevent], [role="menu"], [role="dialog"], [role="listbox"], input, textarea'))
+        prevent: (node) => node instanceof Element && Boolean(node.closest(PREVENT))
       });
       current = viewport;
+      currentContent = content;
       root.setAttribute('data-sinton-lenis', '1');
     } catch (error) {
       console.error('[Sinton Motion] Lenis desactivado por error', error);
@@ -628,6 +690,63 @@
       destroyLenis();
     }
   }
+
+  function rebuildLenis(reason) {
+    const now = performance.now();
+    if (now - lastRebuild < 2000) return;
+    lastRebuild = now;
+    if (CONFIG.debug) console.warn('[Sinton Motion] Lenis reiniciado:', reason);
+    destroyLenis();
+    attachLenis();
+  }
+
+  // Si la rueda gira y la página no se mueve (sin estar en un borde), Lenis está atascado: se reinicia.
+  function onWheelWatch(event) {
+    if (!lenis || event.ctrlKey || Math.abs(event.deltaY) < 1) return;
+    const viewport = current;
+    if (!viewport || !(event.target instanceof Element) || !viewport.contains(event.target)) return;
+    if (event.target.closest(PREVENT)) return;
+    const before = viewport.scrollTop;
+    const max = viewport.scrollHeight - viewport.clientHeight;
+    const down = event.deltaY > 0;
+    if (max <= 1 || (down && before >= max - 1) || (!down && before <= 1)) return;
+    window.clearTimeout(wheelTimer);
+    wheelTimer = window.setTimeout(() => {
+      if (!lenis || viewport !== current) return;
+      if (Math.abs(viewport.scrollTop - before) < 1) rebuildLenis('la rueda no desplaza');
+    }, 350);
+  }
+  document.addEventListener('wheel', onWheelWatch, { capture: true, passive: true });
+
+    // Novedades se abre en el panel derecho: si está plegado (columna < 100 px) se despliega para que se vea completo.
+  const WHATS_NEW = '[data-testid="whats-new-feed-button"]';
+  const EXPAND_LABEL = /(mostrar|abrir|expandir|desplegar|show|open|expand)/i;
+  const COLLAPSED_MAX = 100;
+  const EXPAND_DELAY_MS = 600;
+
+  function rightColumnWidth() {
+    if (!grid || !grid.isConnected) return null;
+    const columns = window.getComputedStyle(grid).gridTemplateColumns.trim().split(/\s+/);
+    const last = parseFloat(columns[columns.length - 1]);
+    return Number.isFinite(last) ? last : null;
+  }
+
+  function findExpandButton() {
+    if (!watchedRight || !watchedRight.isConnected) return null;
+    const buttons = Array.from(watchedRight.querySelectorAll('button, [role="button"]'));
+    return buttons.find((button) => EXPAND_LABEL.test(button.getAttribute('aria-label') || '')) || null;
+  }
+
+  document.addEventListener('click', (event) => {
+    if (!(event.target instanceof Element) || !event.target.closest(WHATS_NEW)) return;
+    window.setTimeout(() => {
+      const width = rightColumnWidth();
+      if (width === null || width > COLLAPSED_MAX) return;
+      const button = findExpandButton();
+      if (button) button.click();
+      else if (CONFIG.debug) console.warn('[Sinton Motion] panel derecho plegado y sin botón de desplegar localizado');
+    }, EXPAND_DELAY_MS);
+  }, { capture: true, passive: true });
 
   function tick() {
     attachLenis();

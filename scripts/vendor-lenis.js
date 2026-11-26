@@ -3,7 +3,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
-const version = '1.3.27';
+const version = '1.3.29';
 const url = `https://unpkg.com/lenis@${version}/dist/lenis.min.js`;
 const root = fileURLToPath(new URL('../', import.meta.url));
 const dir = path.join(root, 'assets', 'vendor');

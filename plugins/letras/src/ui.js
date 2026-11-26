@@ -1,4 +1,4 @@
-// letras · interfaz: panel de letras sobre la vista principal.
+// letras · interfaz: panel de letras dentro de la vista principal (no tapa la barra, la cola ni los paneles laterales).
 (function (root) {
   "use strict";
   const ID = "letras";
@@ -9,8 +9,18 @@
   const PANEL_ID = "sn-lt-panel";
 
   // Selectores de Spotify (si la interfaz cambia, se corrige solo aquí).
-  const SEL = { topBar: '#global-nav-bar, [data-testid="global-nav-bar"]' };
-  const MAX_TOP_BAR = 120;
+  const SEL = {
+    host: "#main-view",
+    page: "#main-view main",
+    topBar: '#global-nav-bar, [data-testid="global-nav-bar"]',
+    home: '[data-testid="home-button"], [data-testid="top-bar-back-button"], [data-testid="top-bar-forward-button"], [data-testid="whats-new-feed-button"]',    widget: '[data-testid="now-playing-widget-v2"]',
+    titleLink: '[data-testid="context-link"]',
+    albumOrTrack: 'a[href*="/album/"], a[href*="/track/"]',
+    artistLinks: 'a[href*="/artist/"]'
+  };
+  const HOME_LABEL = /^(inicio|home|atrás|atras|volver|adelante|avanzar|back|forward|go back|go forward|novedades|what.?s new)$/i;
+  // Tras abrir, la página puede seguir cargando y cambiar de título: ese margen no cuenta como navegación.
+  const GRACE_MS = 800;
 
   const store = api.storage(ID);
   let offsets = store.get("offsets", {});
@@ -19,6 +29,10 @@
   let panel = null;
   let session = null;
   let offDom = null;
+  let host = null;
+  let hostStyle = null;
+  let pageKey = "";
+  let openedAt = 0;
   let onToggle = function () {};
 
   function offsetOf(uri) {
@@ -34,21 +48,74 @@
     return node;
   }
 
-  function fit() {
+  // Enlace de la cabecera: se comporta como el de la barra inferior (se pulsa el enlace nativo de Spotify).
+  function linkNode(text, title, onActivate) {
+    const node = el("span", "sn-lt-link", text);
+    node.setAttribute("role", "link");
+    node.tabIndex = 0;
+    node.title = title;
+    node.addEventListener("click", function (event) {
+      event.preventDefault();
+      onActivate();
+    });
+    node.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      onActivate();
+    });
+    return node;
+  }
+
+  function nativeLink(kind, name) {
+    const widget = document.querySelector(SEL.widget);
+    if (!widget) return null;
+    if (kind === "title") return widget.querySelector(SEL.titleLink) || widget.querySelector(SEL.albumOrTrack);
+    const links = Array.from(widget.querySelectorAll(SEL.artistLinks));
+    return links.find(function (link) { return link.textContent.trim() === name; }) || links[0] || null;
+  }
+
+  function go(kind, name) {
+    const link = nativeLink(kind, name);
+    if (!link) {
+      api.ui.toast("No encuentro ese enlace en la barra de reproducción.", { error: true });
+      return;
+    }
+    close();
+    link.click();
+  }
+
+  function currentPage() {
+    const main = document.querySelector(SEL.page);
+    return main ? (main.getAttribute("aria-label") || "") : "";
+  }
+
+  // Si el panel o su contenedor desaparecen, o la página de debajo cambia (navegación), se cierra la letra.
+  function sync() {
     if (!panel) return;
-    // Se mide desde el borde superior de la barra inferior: con el tema la barra flota con márgenes,
-    // así que su altura sola no basta y el panel la tapaba.
-    panel.style.bottom = api.ui.playbarInset() + "px";
-    // Si existe la barra superior, el panel empieza debajo para no tapar la navegación ni los botones de ventana.
-    const top = document.querySelector(SEL.topBar);
-    const bottom = top ? top.getBoundingClientRect().bottom : 0;
-    const offset = bottom > 0 && bottom <= MAX_TOP_BAR ? Math.round(bottom) : 0;
-    panel.style.top = offset + "px";
-    panel.classList.toggle("sn-lt-full", offset === 0);
+    if (!host || !host.isConnected || !panel.isConnected) {
+      close();
+      return;
+    }
+    const key = currentPage();
+    if (!key) return;
+    if (!pageKey || Date.now() - openedAt < GRACE_MS) {
+      pageKey = key;
+      return;
+    }
+    if (key !== pageKey) close();
   }
 
   function open() {
     if (panel) return;
+    host = document.querySelector(SEL.host);
+    if (!host) {
+      api.ui.fail(ID, "Abrir letras", new Error("no encuentro la vista principal"));
+      return;
+    }
+    hostStyle = { position: host.style.position, isolation: host.style.isolation };
+    if (root.getComputedStyle(host).position === "static") host.style.position = "relative";
+    host.style.isolation = "isolate";
+
     panel = el("section", "sn-lt");
     panel.id = PANEL_ID;
     panel.setAttribute("aria-label", "Letra de la canción");
@@ -73,6 +140,17 @@
     function paintOffset() {
       const track = session && session.track();
       offsetLabel.textContent = logic.formatOffset(track ? offsetOf(track.uri) : 0);
+    }
+
+    function paintTexts(track) {
+      title.textContent = "";
+      artist.textContent = "";
+      if (!track) return;
+      title.append(linkNode(track.name, "Ir a la canción", function () { go("title"); }));
+      track.artists.forEach(function (a, index) {
+        if (index > 0) artist.append(document.createTextNode(", "));
+        artist.append(linkNode(a.name, "Ir al artista", function () { go("artist", a.name); }));
+      });
     }
 
     function nudge(direction) {
@@ -110,18 +188,17 @@
     const body = el("div", "sn-lt-body");
     body.append(view.el);
     panel.append(backdrop, head, body);
-    document.body.appendChild(panel);
-    fit();
-    root.addEventListener("resize", fit);
-    offDom = api.ui.onDom(fit);
+    host.appendChild(panel);
+    openedAt = Date.now();
+    pageKey = currentPage();
+    offDom = api.ui.onDom(sync);
 
     session = api.lyrics.follow({
       view: view,
       getOffset: offsetOf,
       onTrack: function (track, changed) {
         if (!changed) return;
-        title.textContent = track ? track.name : "";
-        artist.textContent = track ? track.artists.map(function (a) { return a.name; }).join(", ") : "";
+        paintTexts(track);
         cover.hidden = !(track && track.image);
         if (track && track.image) cover.src = track.image;
         backdrop.style.backgroundImage = track && track.image ? 'url("' + track.image.replace(/"/g, "%22") + '")' : "";
@@ -135,17 +212,36 @@
     if (!panel) return;
     if (session) session.stop();
     session = null;
-    root.removeEventListener("resize", fit);
     if (offDom) offDom();
     offDom = null;
     panel.remove();
     panel = null;
+    if (host && hostStyle) {
+      host.style.position = hostStyle.position;
+      host.style.isolation = hostStyle.isolation;
+    }
+    host = null;
+    hostStyle = null;
+    pageKey = "";
     onToggle(false);
   }
 
   function toggle() {
     if (panel) close();
     else open();
+  }
+
+  function isHomeButton(target) {
+    if (!(target instanceof Element)) return false;
+    if (target.closest(SEL.home)) return true;
+    const control = target.closest("button, a, [role=\"button\"]");
+    const label = control ? control.getAttribute("aria-label") : null;
+    return Boolean(label && HOME_LABEL.test(label.trim()) && control.closest(SEL.topBar));
+  }
+
+  // Al pulsar Inicio se cierra la letra y se deja que Spotify navegue (no se cancela el clic).
+  function onClick(event) {
+    if (panel && isHomeButton(event.target)) close();
   }
 
   function onKey(event) {
@@ -163,10 +259,12 @@
   function start(toggleListener) {
     onToggle = toggleListener || function () {};
     document.addEventListener("keydown", onKey, true);
+    document.addEventListener("click", onClick, true);
   }
 
   function stop() {
     document.removeEventListener("keydown", onKey, true);
+    document.removeEventListener("click", onClick, true);
     close();
   }
 

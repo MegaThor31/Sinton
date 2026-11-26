@@ -49,7 +49,6 @@ SOFTWARE.
   --spice-accent: var(--sn-accent,#1ed760);
   --spice-contour: var(--sn-border,#353535);
   --spice-main-elevated: var(--sn-bg2,#242424);
-  --spice-highlight: var(--sn-bg3,#171717);
   --spice-highlight-elevated: var(--sn-bg-hi,#2b2b2b);
   --thor-radius: 12px;
   --thor-radius-small: 8px;
@@ -143,6 +142,60 @@ body { font-family: var(--thor-font); background-color: var(--spice-main); }
   outline: 2px solid var(--spice-button-secondary);
   outline-offset: 2px;
 }
+
+/* Flechas de los carruseles: viven en un bloque de tema claro de Spotify, así que se fuerza un par de colores que siempre contraste. */
+[data-testid="carousel-next-button"],
+[data-testid="carousel-previous-button"] {
+  background-color: var(--spice-button) !important;
+  color: var(--sn-on-accent, #171717) !important;
+}
+[data-testid="carousel-next-button"]:hover,
+[data-testid="carousel-previous-button"]:hover {
+  background-color: var(--spice-button-secondary) !important;
+}
+:is([data-testid="carousel-next-button"], [data-testid="carousel-previous-button"]) :is(svg, path) {
+  fill: currentColor !important;
+  color: inherit !important;
+}
+/* Flechas de navegación y Novedades: estados visibles. */
+:is([data-testid="top-bar-back-button"], [data-testid="top-bar-forward-button"], [data-testid="whats-new-feed-button"]) {
+  inline-size: 36px;
+  block-size: 36px;
+  min-inline-size: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+:is([data-testid="top-bar-back-button"], [data-testid="top-bar-forward-button"], [data-testid="whats-new-feed-button"]):not(:disabled):not([aria-disabled="true"]):hover {
+  background-color: rgba(var(--sn-accent-rgb,30,215,96),.18);
+  color: var(--spice-button-secondary);
+}
+:is([data-testid="top-bar-back-button"], [data-testid="top-bar-forward-button"], [data-testid="whats-new-feed-button"]):not(:disabled):not([aria-disabled="true"]):active {
+  background-color: rgba(var(--sn-accent-rgb,30,215,96),.32);
+  color: var(--spice-button-active);
+}
+:is([data-testid="top-bar-back-button"], [data-testid="top-bar-forward-button"], [data-testid="whats-new-feed-button"]):focus-visible {
+  outline: 2px solid var(--spice-button-secondary);
+  outline-offset: 2px;
+}
+:is([data-testid="top-bar-back-button"], [data-testid="top-bar-forward-button"]):is(:disabled, [aria-disabled="true"]) { opacity: .35; }
+
+
+:root { --sn-playbar-h: 80px;}
+
+/* Barra de reproducción más alta (el alto original era 72 px). */
+[data-testid="now-playing-bar"],
+[data-testid="now-playing-bar"] > div {
+  height: var(--sn-playbar-h) !important;
+}
+
+
+
+
+
 @media (prefers-reduced-motion: reduce) {
   [data-encore-id="card"], :has(> [data-testid="shortcut-background"]) { transition: none; }
   [data-encore-id="card"]:hover { transform: none; }

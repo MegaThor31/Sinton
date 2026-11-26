@@ -1,6 +1,6 @@
 /* letras */
 .sn-lt {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 96px; z-index: 2147482000;
+  position: absolute; inset: 0; z-index: 5; border-radius: inherit;
   display: flex; flex-direction: column; overflow: hidden; background: #171717; color: #fff;
   -webkit-app-region: no-drag; animation: sn-lt-in 240ms cubic-bezier(.2, .8, .2, 1);
 }
@@ -14,12 +14,14 @@
   position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px;
   padding: 20px 32px 12px; flex-wrap: wrap;
 }
-.sn-lt-full .sn-lt-head { padding-top: 44px; }
 .sn-lt-info { display: flex; align-items: center; gap: 14px; min-width: 0; flex: 1 1 260px; }
 .sn-lt-cover { width: 56px; height: 56px; border-radius: 8px; object-fit: cover; box-shadow: 0 6px 20px rgba(0, 0, 0, .5); flex: 0 0 auto; }
 .sn-lt-texts { min-width: 0; }
 .sn-lt-title { margin: 0; font-size: 20px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sn-lt-artist { margin: 2px 0 0; font-size: 14px; color: rgba(255, 255, 255, .7); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sn-lt-link { cursor: pointer; }
+.sn-lt-link:hover { text-decoration: underline; color: #fff; }
+.sn-lt-link:focus-visible { outline: 2px solid var(--sn-hover,#3be477); outline-offset: 2px; border-radius: 4px; }
 .sn-lt-tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .sn-lt-offset { min-width: 56px; text-align: center; font-size: 12px; color: rgba(255, 255, 255, .8); cursor: default; user-select: none; }
 .sn-lt-btn {
@@ -29,6 +31,6 @@
 .sn-lt-btn:hover { border-color: var(--sn-accent,#1ed760); color: var(--sn-hover,#3be477); }
 .sn-lt-btn:active { color: var(--sn-press,#1abc54); }
 .sn-lt-btn:focus-visible { outline: 2px solid var(--sn-hover,#3be477); outline-offset: 2px; }
-.sn-lt-body { position: relative; flex: 1; min-height: 0; padding: 0 max(32px, 12vw); }
+.sn-lt-body { position: relative; flex: 1; min-height: 0; padding: 0 max(32px, 8%); }
 @keyframes sn-lt-in { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .sn-lt { animation: none; } .sn-lt-bg { transition: none; } }
